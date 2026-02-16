@@ -15,7 +15,6 @@ import {
 const PROVIDER_ID = 'mcp-shell-server.provider';
 const SERVER_LABEL = 'MCP Shell Server';
 const SERVER_VERSION = '2.7.0';
-type ShellToolsApi = ShellToolRuntime['shellTools'];
 type ServerManagerApi = ShellToolRuntime['serverManager'];
 
 function getWorkspaceCwd(): string | undefined {
@@ -232,7 +231,13 @@ export function activate(context: vscode.ExtensionContext) {
         SERVER_LABEL,
         process.execPath,
         [serverEntry],
-        {},
+        {
+          ...process.env,
+          // Ensure shell-server daemon mode is enabled when launched from VS Code.
+          MCP_SHELL_DAEMON_ENABLED: 'true',
+          // Keep daemon MCP proxy enabled by default.
+          MCP_SHELL_USE_DAEMON_MCP: 'true',
+        },
         SERVER_VERSION
       );
 
