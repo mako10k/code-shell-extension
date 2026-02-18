@@ -9,9 +9,10 @@ This release prepares the VS Code extension package at `packages/code-shell-exte
 ## Changes
 
 - Updated `vscode-mcp-shell/package.json` version to `0.2.4`
-- Updated dependencies to `@mako10k/mcp-shell-server@2.7.1` and `@mako10k/shell-server@0.2.4`
+- Removed direct dependency on `@mako10k/mcp-shell-server`
+- Updated dependency to `@mako10k/shell-server@0.2.4`
 - Updated tool runtime import to `@mako10k/shell-server/tool-runtime`
-- Updated `bundle:server` entrypoint to published package layout (`dist/index.js`)
+- Updated build flow to bundle extension runtime only
 - Regenerated `vscode-mcp-shell/package-lock.json`
 - Added `vscode-mcp-shell/CHANGELOG.md`
 
