@@ -10,7 +10,7 @@ import {
   type ShellToolRuntime,
   type CreateMessageCallback,
   type ElicitationHandler
-} from '@mako10k/mcp-shell-server/tool-runtime';
+} from '@mako10k/shell-server/tool-runtime';
 
 const PROVIDER_ID = 'mcp-shell-server.provider';
 const SERVER_LABEL = 'MCP Shell Server';
