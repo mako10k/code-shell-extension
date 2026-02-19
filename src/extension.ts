@@ -12,13 +12,64 @@ import {
 
 const SERVER_LABEL = 'Safe Shell Runner';
 const ENABLED_TOOL_NAMES = TOOL_NAMES.filter((toolName) => !toolName.startsWith('server_'));
+const FALLBACK_WORKSPACE_KEY = '__fallback__';
 
-function getWorkspaceCwd(): string | undefined {
-  const folder = vscode.workspace.workspaceFolders?.[0];
-  return folder?.uri.fsPath;
+function getConfiguredWorkspaceFolder(output: vscode.OutputChannel): vscode.WorkspaceFolder | undefined {
+  const folders = vscode.workspace.workspaceFolders ?? [];
+  if (folders.length === 0) {
+    return undefined;
+  }
+
+  const config = vscode.workspace.getConfiguration('safeShellRunner');
+  const configuredWorkspace = config.get<string>('workspaceFolder', '').trim();
+  if (configuredWorkspace) {
+    const matchedFolder = folders.find((folder) =>
+      folder.name === configuredWorkspace || folder.uri.fsPath === configuredWorkspace
+    );
+
+    if (matchedFolder) {
+      return matchedFolder;
+    }
+
+    output.appendLine(`Configured safeShellRunner.workspaceFolder not found: ${configuredWorkspace}`);
+  }
+
+  if (folders.length === 1) {
+    return folders[0];
+  }
+
+  return undefined;
 }
 
-let runtimePromise: Promise<ShellToolRuntime> | undefined;
+function resolveConfiguredWorkingDirectory(folder: vscode.WorkspaceFolder): string {
+  const config = vscode.workspace.getConfiguration('safeShellRunner', folder.uri);
+  const template = config.get<string>('defaultWorkingDirectory', '${workspaceFolder}');
+
+  return template
+    .replaceAll('${workspaceFolder}', folder.uri.fsPath)
+    .replaceAll('${workspaceFolderBasename}', folder.name);
+}
+
+function getAllowedWorkingDirectories(preferred?: string): string[] {
+  const workspaceDirectories = vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath) ?? [];
+
+  return Array.from(new Set([
+    ...workspaceDirectories,
+    preferred,
+    process.cwd(),
+  ].filter((directory): directory is string => Boolean(directory))));
+}
+
+function configureShellServerEnvironment(preferred?: string) {
+  const allowedDirectories = getAllowedWorkingDirectories(preferred);
+  process.env['SHELL_SERVER_ALLOWED_WORKDIRS'] = allowedDirectories.join(',');
+
+  if (preferred) {
+    process.env['SHELL_SERVER_DEFAULT_WORKDIR'] = preferred;
+  }
+}
+
+const runtimePromises = new Map<string, Promise<ShellToolRuntime>>();
 
 function createVSCodeMessageCallback(): CreateMessageCallback {
   return async (request: Parameters<CreateMessageCallback>[0]) => {
@@ -93,23 +144,39 @@ function createVSCodeElicitationHandler(): ElicitationHandler {
   };
 }
 
-async function getRuntime(): Promise<ShellToolRuntime> {
-  if (!runtimePromise) {
-    runtimePromise = (async () => {
-      const workspaceCwd = getWorkspaceCwd();
-      return createShellToolRuntime({
-        defaultWorkingDirectory: workspaceCwd,
+async function getRuntime(workspaceCwd: string | undefined): Promise<ShellToolRuntime> {
+  const runtimeKey = workspaceCwd ?? FALLBACK_WORKSPACE_KEY;
+  const existingRuntime = runtimePromises.get(runtimeKey);
+  if (existingRuntime) {
+    return existingRuntime;
+  }
+
+  const runtimePromise = (async () => {
+    configureShellServerEnvironment(workspaceCwd);
+
+    const runtime = createShellToolRuntime({
+      defaultWorkingDirectory: workspaceCwd,
         createMessage: createVSCodeMessageCallback(),
         elicitationHandler: createVSCodeElicitationHandler()
-      });
-    })();
-  }
+    });
+
+    if (workspaceCwd) {
+      runtime.processManager.setDefaultWorkingDirectory(workspaceCwd);
+    }
+
+    return runtime;
+  })();
+
+  runtimePromises.set(runtimeKey, runtimePromise);
 
   return runtimePromise;
 }
 
 class DirectShellTool implements vscode.LanguageModelTool<ToolParams> {
-  constructor(private toolName: ToolName) {}
+  constructor(
+    private toolName: ToolName,
+    private output: vscode.OutputChannel
+  ) {}
 
   async prepareInvocation(
     options: vscode.LanguageModelToolInvocationPrepareOptions<ToolParams>
@@ -129,14 +196,31 @@ class DirectShellTool implements vscode.LanguageModelTool<ToolParams> {
     options: vscode.LanguageModelToolInvocationOptions<ToolParams>,
     _token: vscode.CancellationToken
   ): Promise<vscode.LanguageModelToolResult> {
-    const runtime = await getRuntime();
+    const workspaceFolder = getConfiguredWorkspaceFolder(this.output);
+    const hasMultipleFolders = (vscode.workspace.workspaceFolders?.length ?? 0) > 1;
+
+    if (!workspaceFolder && hasMultipleFolders) {
+      throw new Error(
+        'Multiple workspace folders detected. Set safeShellRunner.workspaceFolder to the target folder name or path.'
+      );
+    }
+
+    const workspaceCwd = workspaceFolder ? resolveConfiguredWorkingDirectory(workspaceFolder) : undefined;
+    const runtime = await getRuntime(workspaceCwd);
+
+    if (workspaceCwd) {
+      this.output.appendLine(`Using workspace runtime: ${workspaceCwd}`);
+    } else {
+      this.output.appendLine('No workspace folder was resolved; using fallback runtime.');
+    }
+
     const result = await dispatchToolCall(
       runtime.shellTools,
       runtime.serverManager,
       this.toolName,
       options.input,
       {
-        defaultWorkingDirectory: resolveDefaultWorkingDirectory(),
+        defaultWorkingDirectory: workspaceCwd,
         fallbackWorkingDirectory: process.cwd(),
       }
     );
@@ -176,20 +260,18 @@ function buildConfirmationMessage(toolName: ToolName, input?: ToolParams): vscod
   return new vscode.MarkdownString(`Run ${toolName}?`);
 }
 
-const resolveDefaultWorkingDirectory = (): string | undefined => getWorkspaceCwd();
-
 export function activate(context: vscode.ExtensionContext) {
   const output = vscode.window.createOutputChannel(SERVER_LABEL);
   output.appendLine('Registering Safe Shell Runner language model tools.');
   const toolRegistrations = ENABLED_TOOL_NAMES.map((toolName) =>
-    vscode.lm.registerTool(toolName, new DirectShellTool(toolName))
+    vscode.lm.registerTool(toolName, new DirectShellTool(toolName, output))
   );
 
   context.subscriptions.push(output, ...toolRegistrations);
 }
 
 export async function deactivate() {
-  if (runtimePromise) {
+  for (const runtimePromise of runtimePromises.values()) {
     try {
       const runtime = await runtimePromise;
       await runtime.cleanup();
@@ -197,4 +279,6 @@ export async function deactivate() {
       // Avoid throwing on shutdown.
     }
   }
+
+  runtimePromises.clear();
 }

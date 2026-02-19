@@ -2,7 +2,7 @@
   "name": "safe-shell-runner-vscode",
   "displayName": "Safe Shell Runner",
   "description": "VS Code extension that registers Safe Shell Runner tools.",
-  "version": "0.2.5",
+  "version": "0.2.7",
   "publisher": "mako10k",
   "license": "MIT",
   "repository": {
@@ -368,7 +368,24 @@
           "additionalProperties": true
         }
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Safe Shell Runner",
+      "properties": {
+        "safeShellRunner.workspaceFolder": {
+          "type": "string",
+          "default": "",
+          "scope": "window",
+          "markdownDescription": "Target workspace folder name or absolute path when multiple workspace folders are open. Leave empty to auto-select in single-folder workspaces."
+        },
+        "safeShellRunner.defaultWorkingDirectory": {
+          "type": "string",
+          "default": "${workspaceFolder}",
+          "scope": "resource",
+          "markdownDescription": "Default working directory template for tool execution. Supports `${workspaceFolder}` and `${workspaceFolderBasename}`."
+        }
+      }
+    }
   },
   "scripts": {
     "build": "npm run typecheck && npm run bundle:extension",
