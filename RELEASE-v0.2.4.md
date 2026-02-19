@@ -4,21 +4,21 @@
 
 ## Scope
 
-This release prepares the VS Code extension package at `packages/code-shell-extension/vscode-mcp-shell` for version `0.2.4`.
+This release prepares the VS Code extension package at `packages/code-shell-extension` for version `0.2.4`.
 
 ## Changes
 
-- Updated `vscode-mcp-shell/package.json` version to `0.2.4`
+- Updated `package.json` version to `0.2.4`
 - Removed direct dependency on `@mako10k/mcp-shell-server`
 - Updated dependency to `@mako10k/shell-server@0.2.4`
 - Updated tool runtime import to `@mako10k/shell-server/tool-runtime`
 - Updated build flow to bundle extension runtime only
-- Regenerated `vscode-mcp-shell/package-lock.json`
-- Added `vscode-mcp-shell/CHANGELOG.md`
+- Regenerated `package-lock.json`
+- Added `CHANGELOG.md`
 
 ## Validation
 
-From `packages/code-shell-extension/vscode-mcp-shell`:
+From `packages/code-shell-extension`:
 
 ```bash
 npm install
@@ -27,7 +27,7 @@ npm run package:release
 npx -y @vscode/vsce ls --tree
 ```
 
-Result: `mcp-shell-server-vscode-0.2.4.vsix` was generated successfully.
+Result: `safe-shell-runner-vscode-0.2.4.vsix` was generated successfully.
 
 ## Tagging (same rule as repository)
 
@@ -40,5 +40,5 @@ git push origin v0.2.4
 ## GitHub Release
 
 - Create release from tag `v0.2.4`
-- Use `vscode-mcp-shell/CHANGELOG.md` and this document as release notes
+- Use `CHANGELOG.md` and this document as release notes
 - Attach generated `.vsix` artifact

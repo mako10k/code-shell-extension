@@ -1,14 +1,10 @@
-# code-shell-extension
+# Safe Shell Runner VS Code Extension
 
-VS Code extension wrapper for MCP Shell Server.
+This extension provides Safe Shell Runner tools and registers a shell server definition in VS Code.
 
-## Build
+## Development
 
-```bash
-npm install
-npm run build
-```
+- Install dependencies in this folder: `npm install`
+- Build the extension: `npm run build`
 
-## Notes
-
-This extension depends on the shared shell-server runtime surface.
+The server entrypoint is resolved from the bundled `dist/mcp-shell-server.js` artifact packaged with this extension.

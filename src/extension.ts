@@ -12,8 +12,8 @@ import {
   type ElicitationHandler
 } from '@mako10k/shell-server/tool-runtime';
 
-const PROVIDER_ID = 'mcp-shell-server.provider';
-const SERVER_LABEL = 'MCP Shell Server';
+const PROVIDER_ID = 'safe-shell-runner.provider';
+const SERVER_LABEL = 'Safe Shell Runner';
 const SERVER_VERSION = '2.7.0';
 type ServerManagerApi = ShellToolRuntime['serverManager'];
 
@@ -59,7 +59,7 @@ function createVSCodeMessageCallback(): CreateMessageCallback {
     }
 
     const response = await model.sendRequest(messages, {
-      justification: 'Run MCP Shell Server enhanced safety evaluation via VS Code language model.'
+      justification: 'Run Safe Shell Runner enhanced safety evaluation via VS Code language model.'
     });
 
     let text = '';
@@ -113,7 +113,7 @@ async function getRuntime(
     runtimePromise = (async () => {
       const serverEntry = getServerEntry(context);
       if (!fs.existsSync(serverEntry)) {
-        const message = `MCP Shell Server entry not found at ${serverEntry}`;
+        const message = `Safe Shell Runner entry not found at ${serverEntry}`;
         output.appendLine(message);
         throw new Error(message);
       }
@@ -145,9 +145,9 @@ class DirectShellTool implements vscode.LanguageModelTool<ToolParams> {
     const message = buildConfirmationMessage(this.toolName, options.input);
 
     return {
-      invocationMessage: `Executing ${this.toolName} via MCP Shell Server`,
+      invocationMessage: `Executing ${this.toolName} via Safe Shell Runner`,
       confirmationMessages: {
-        title: `MCP Shell Server: ${this.toolName}`,
+        title: `Safe Shell Runner: ${this.toolName}`,
         message
       }
     };
@@ -180,7 +180,7 @@ class DirectShellTool implements vscode.LanguageModelTool<ToolParams> {
 
 function buildConfirmationMessage(toolName: ToolName, input?: ToolParams): vscode.MarkdownString {
   if (!input) {
-    return new vscode.MarkdownString('Run MCP Shell Server tool?');
+    return new vscode.MarkdownString('Run Safe Shell Runner tool?');
   }
 
   if (toolName === 'shell_execute') {
@@ -205,7 +205,7 @@ function buildConfirmationMessage(toolName: ToolName, input?: ToolParams): vscod
   }
 
   if (toolName.startsWith('server_')) {
-    return new vscode.MarkdownString('Manage MCP Shell Server attachment?');
+    return new vscode.MarkdownString('Manage Safe Shell Runner attachment?');
   }
 
   return new vscode.MarkdownString(`Run ${toolName}?`);
@@ -215,13 +215,13 @@ const resolveDefaultWorkingDirectory = (): string | undefined => getWorkspaceCwd
 
 export function activate(context: vscode.ExtensionContext) {
   const output = vscode.window.createOutputChannel(SERVER_LABEL);
-  output.appendLine('Registering MCP server definition provider.');
+  output.appendLine('Registering shell server definition provider.');
 
   const provider: vscode.McpServerDefinitionProvider<vscode.McpServerDefinition> = {
     provideMcpServerDefinitions: async () => {
       const serverEntry = getServerEntry(context);
       if (!fs.existsSync(serverEntry)) {
-        const message = `MCP Shell Server entry not found at ${serverEntry}`;
+        const message = `Safe Shell Runner entry not found at ${serverEntry}`;
         output.appendLine(message);
         vscode.window.showErrorMessage(message);
         return [];
