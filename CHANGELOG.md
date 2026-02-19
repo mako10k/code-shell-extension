@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Changed
+- Flattened extension structure by removing the nested `vscode-mcp-shell/` directory.
+- Removed MCP server definition provider registration and contribution.
+- Removed exposed server lifecycle tools (`server_*`) from Copilot tool surface.
+- Updated extension metadata and user-facing text to align with Safe Shell Runner naming.
+
 ## [0.2.4] - 2026-02-18
 
 ### Changed

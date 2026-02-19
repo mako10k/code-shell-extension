@@ -11,7 +11,7 @@ import {
 } from '@mako10k/shell-server/tool-runtime';
 
 const SERVER_LABEL = 'Safe Shell Runner';
-type ServerManagerApi = ShellToolRuntime['serverManager'];
+const ENABLED_TOOL_NAMES = TOOL_NAMES.filter((toolName) => !toolName.startsWith('server_'));
 
 function getWorkspaceCwd(): string | undefined {
   const folder = vscode.workspace.workspaceFolders?.[0];
@@ -93,10 +93,7 @@ function createVSCodeElicitationHandler(): ElicitationHandler {
   };
 }
 
-async function getRuntime(
-  context: vscode.ExtensionContext,
-  output: vscode.OutputChannel
-): Promise<ShellToolRuntime> {
+async function getRuntime(): Promise<ShellToolRuntime> {
   if (!runtimePromise) {
     runtimePromise = (async () => {
       const workspaceCwd = getWorkspaceCwd();
@@ -112,13 +109,7 @@ async function getRuntime(
 }
 
 class DirectShellTool implements vscode.LanguageModelTool<ToolParams> {
-  constructor(
-    private context: vscode.ExtensionContext,
-    private output: vscode.OutputChannel,
-    private toolName: ToolName
-  ) {}
-
-  private serverManager?: ServerManagerApi;
+  constructor(private toolName: ToolName) {}
 
   async prepareInvocation(
     options: vscode.LanguageModelToolInvocationPrepareOptions<ToolParams>
@@ -138,10 +129,7 @@ class DirectShellTool implements vscode.LanguageModelTool<ToolParams> {
     options: vscode.LanguageModelToolInvocationOptions<ToolParams>,
     _token: vscode.CancellationToken
   ): Promise<vscode.LanguageModelToolResult> {
-    const runtime = await getRuntime(this.context, this.output);
-    if (!this.serverManager) {
-      this.serverManager = runtime.serverManager;
-    }
+    const runtime = await getRuntime();
     const result = await dispatchToolCall(
       runtime.shellTools,
       runtime.serverManager,
@@ -185,10 +173,6 @@ function buildConfirmationMessage(toolName: ToolName, input?: ToolParams): vscod
     return new vscode.MarkdownString('Perform automatic cleanup of execution outputs?');
   }
 
-  if (toolName.startsWith('server_')) {
-    return new vscode.MarkdownString('Manage Safe Shell Runner attachment?');
-  }
-
   return new vscode.MarkdownString(`Run ${toolName}?`);
 }
 
@@ -197,8 +181,8 @@ const resolveDefaultWorkingDirectory = (): string | undefined => getWorkspaceCwd
 export function activate(context: vscode.ExtensionContext) {
   const output = vscode.window.createOutputChannel(SERVER_LABEL);
   output.appendLine('Registering Safe Shell Runner language model tools.');
-  const toolRegistrations = TOOL_NAMES.map((toolName) =>
-    vscode.lm.registerTool(toolName, new DirectShellTool(context, output, toolName))
+  const toolRegistrations = ENABLED_TOOL_NAMES.map((toolName) =>
+    vscode.lm.registerTool(toolName, new DirectShellTool(toolName))
   );
 
   context.subscriptions.push(output, ...toolRegistrations);
