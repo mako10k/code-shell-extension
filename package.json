@@ -2,12 +2,12 @@
   "name": "safe-shell-runner-vscode",
   "displayName": "Safe Shell Runner",
   "description": "VS Code extension that registers Safe Shell Runner tools.",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "publisher": "mako10k",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mako10k/mcp-shell-server.git"
+    "url": "https://github.com/mako10k/code-shell-extension.git"
   },
   "engines": {
     "vscode": "^1.101.0"
