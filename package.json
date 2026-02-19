@@ -35,17 +35,10 @@
     "onLanguageModelTool:server_stop",
     "onLanguageModelTool:server_get",
     "onLanguageModelTool:server_detach",
-    "onLanguageModelTool:server_reattach",
-    "onMcpServerDefinitionProvider:safe-shell-runner.provider"
+    "onLanguageModelTool:server_reattach"
   ],
   "main": "./dist/extension.js",
   "contributes": {
-    "mcpServerDefinitionProviders": [
-      {
-        "id": "safe-shell-runner.provider",
-        "label": "Safe Shell Runner"
-      }
-    ],
     "languageModelTools": [
       {
         "name": "shell_execute",

@@ -1,5 +1,3 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import * as vscode from 'vscode';
 import {
   createShellToolRuntime,
@@ -12,22 +10,12 @@ import {
   type ElicitationHandler
 } from '@mako10k/shell-server/tool-runtime';
 
-const PROVIDER_ID = 'safe-shell-runner.provider';
 const SERVER_LABEL = 'Safe Shell Runner';
-const SERVER_VERSION = '2.7.0';
 type ServerManagerApi = ShellToolRuntime['serverManager'];
 
 function getWorkspaceCwd(): string | undefined {
   const folder = vscode.workspace.workspaceFolders?.[0];
   return folder?.uri.fsPath;
-}
-
-function getServerEntry(context: vscode.ExtensionContext): string {
-  return path.join(
-    context.extensionPath,
-    'dist',
-    'mcp-shell-server.js'
-  );
 }
 
 let runtimePromise: Promise<ShellToolRuntime> | undefined;
@@ -111,13 +99,6 @@ async function getRuntime(
 ): Promise<ShellToolRuntime> {
   if (!runtimePromise) {
     runtimePromise = (async () => {
-      const serverEntry = getServerEntry(context);
-      if (!fs.existsSync(serverEntry)) {
-        const message = `Safe Shell Runner entry not found at ${serverEntry}`;
-        output.appendLine(message);
-        throw new Error(message);
-      }
-
       const workspaceCwd = getWorkspaceCwd();
       return createShellToolRuntime({
         defaultWorkingDirectory: workspaceCwd,
@@ -215,45 +196,12 @@ const resolveDefaultWorkingDirectory = (): string | undefined => getWorkspaceCwd
 
 export function activate(context: vscode.ExtensionContext) {
   const output = vscode.window.createOutputChannel(SERVER_LABEL);
-  output.appendLine('Registering shell server definition provider.');
-
-  const provider: vscode.McpServerDefinitionProvider<vscode.McpServerDefinition> = {
-    provideMcpServerDefinitions: async () => {
-      const serverEntry = getServerEntry(context);
-      if (!fs.existsSync(serverEntry)) {
-        const message = `Safe Shell Runner entry not found at ${serverEntry}`;
-        output.appendLine(message);
-        vscode.window.showErrorMessage(message);
-        return [];
-      }
-
-      const server = new vscode.McpStdioServerDefinition(
-        SERVER_LABEL,
-        process.execPath,
-        [serverEntry],
-        {
-          ...process.env,
-          // Ensure shell-server daemon mode is enabled when launched from VS Code.
-          MCP_SHELL_DAEMON_ENABLED: 'true',
-          // Keep daemon MCP proxy enabled by default.
-          MCP_SHELL_USE_DAEMON_MCP: 'true',
-        },
-        SERVER_VERSION
-      );
-
-      const workspaceCwd = getWorkspaceCwd() ?? context.extensionPath;
-      server.cwd = vscode.Uri.file(workspaceCwd);
-
-      return [server];
-    }
-  };
-
-  const registration = vscode.lm.registerMcpServerDefinitionProvider(PROVIDER_ID, provider);
+  output.appendLine('Registering Safe Shell Runner language model tools.');
   const toolRegistrations = TOOL_NAMES.map((toolName) =>
     vscode.lm.registerTool(toolName, new DirectShellTool(context, output, toolName))
   );
 
-  context.subscriptions.push(output, registration, ...toolRegistrations);
+  context.subscriptions.push(output, ...toolRegistrations);
 }
 
 export async function deactivate() {
